@@ -130,3 +130,39 @@ function ia_dunce.process_door_cleanup(self)
         self._active_door_pos = nil
     end
 end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+--function ia_dunce.find_nearby_doors(pos) -- TODO xref against sensors
+--    local doors_found = {}
+--    -- Search 2 nodes up and 1 node down for door groups
+--    local minp = vector.add(pos, {x=-1, y=-1, z=-1})
+--    local maxp = vector.add(pos, {x=1, y=2, z=1})
+--    local nodes = minetest.find_nodes_in_area(minp, maxp, {"group:door"})
+--    
+--    for _, p in ipairs(nodes) do
+--        table.insert(doors_found, p)
+--    end
+--    return doors_found
+--end
+function ia_dunce.find_nearby_doors(pos, radius)
+    local r = radius or 2
+    return get_sorted_nodes(pos, r, {"group:door"})
+end

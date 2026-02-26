@@ -150,3 +150,11 @@ function ia_dunce.get_up(self)
     self.data.is_sleeping = false
     return true
 end
+
+
+--- Finds the closest bed or sleeping mat.
+function ia_dunce.find_closest_bed(self, radius)
+    local pos = self.object:get_pos()
+    local beds = get_sorted_nodes(pos, radius, {"group:bed", "sleeping_mat:mat"})
+    return beds[1] -- Return closest
+end

@@ -1,5 +1,7 @@
 -- ia_dunce/sensors.lua
 
+-- TODO optionally search within chests
+
 --- Internal Helper: Finds and sorts objects based on a filter.
 -- @param pos Center position
 -- @param radius Search radius
@@ -99,4 +101,28 @@ local function is_not_crowded(stack, obj) -- TODO expose convenience filters
     -- Reuse our occupation check from the previous step!
     -- We ignore the object itself, but check if ANYONE ELSE is standing there.
     return not ia_dunce.is_node_occupied(pos, obj)
+end
+
+
+
+
+
+
+
+
+local function get_sorted_nodes(pos, radius, node_names)
+    local minp = vector.add(pos, -radius)
+    local maxp = vector.add(pos, radius)
+    local nodes = minetest.find_nodes_in_area(minp, maxp, node_names)
+
+    local sorted = {}
+    for _, p in ipairs(nodes) do
+        table.insert(sorted, {
+            pos = p,
+            distance = vector.distance(pos, p)
+        })
+    end
+
+    table.sort(sorted, function(a, b) return a.distance < b.distance end)
+    return sorted
 end
