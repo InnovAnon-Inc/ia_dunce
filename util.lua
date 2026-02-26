@@ -492,3 +492,35 @@ function ia_dunce.is_hostile(self, object)
 
     return false
 end
+
+
+
+function ia_dunce.get_direction_from_param2(param2)
+    local dirs = {
+        [0] = {x = 0, z = 1},   -- North
+        [1] = {x = 1, z = 0},   -- East
+        [2] = {x = 0, z = -1},  -- South
+        [3] = {x = -1, z = 0},  -- West
+    }
+    return dirs[param2 % 4]
+end
+--- Internal: Finds a safe spot next to the bed to stand up.
+function ia_dunce.find_safe_wakeup_pos(pos)
+	minetest.log('ia_dunce.find_safe_wakeup_pos()')
+    -- Check 4 cardinal directions around the bed
+    local neighbors = {
+        {x=1, y=0, z=0}, {x=-1, y=0, z=0},
+        {x=0, y=0, z=1}, {x=0, y=0, z=-1}
+    }
+    for _, offset in ipairs(neighbors) do
+        local check_pos = vector.add(pos, offset)
+        local node = minetest.get_node(check_pos)
+        local head_node = minetest.get_node({x=check_pos.x, y=check_pos.y+1, z=check_pos.z})
+
+        -- If the floor is walkable and there is air for the head/body
+        if ia_dunce.is_buildable(check_pos) and ia_dunce.is_buildable(head_node) then
+            return check_pos
+        end
+    end
+    return vector.add(pos, {x=0, y=0.5, z=0}) -- Fallback: pop up slightly
+end

@@ -193,25 +193,52 @@ end
 -- @param self The fake player object.
 -- @param condition Optional filter (defaults to all armor).
 -- @return boolean (Success).
-function ia_dunce.auto_equip_armor(self, condition)
-    minetest.log('ia_dunce.auto_equip_armor()')
-    if not armor then return false end
-
-    local inv = get_inv(self)
-    local main_list = inv:get_list("main")
-
-    for i, stack in ipairs(main_list) do
-        local name = stack:get_name()
-        if not stack:is_empty() and minetest.get_item_group(name, "armor") > 0 then
-            -- Use the armor mod API
-            armor:equip(self.fake_player, stack)
-            return true
-        end
-    end
-    return false
-end
+--function ia_dunce.auto_equip_armor(self, condition)
+--    minetest.log('ia_dunce.auto_equip_armor()')
+--    if not armor then return false end
+--
+--    local inv = get_inv(self)
+--    local main_list = inv:get_list("main")
+--
+--    for i, stack in ipairs(main_list) do
+--        local name = stack:get_name()
+--        if not stack:is_empty() and minetest.get_item_group(name, "armor") > 0 then
+--            -- Use the armor mod API
+--            armor:equip(self.fake_player, stack)
+--            return true
+--        end
+--    end
+--    return false
+--end
 
 function ia_dunce.is_inventory_full(self, list_name)
     local inv = self.fake_player:get_inventory()
     return not inv:room_for_item(list_name or "main", "default:dirt") -- Use a dummy common item
+end
+
+
+
+
+-- ia_dunce/inventory.lua (Added functions)
+
+--- High-level predicate: Do we have the item OR can we craft it immediately?
+-- @param self The Dunce entity.
+-- @param item_name The name of the desired item.
+-- @return boolean.
+function ia_dunce.can_obtain_item(self, item_name)
+    -- 1. Do we already have it?
+    if ia_dunce.has_item(self, item_name) then
+        return true
+    end
+
+    -- 2. Can we craft it in one step?
+    local recipe = minetest.get_craft_recipe(item_name)
+    if recipe and recipe.items then
+        local reqs = ia_dunce.get_recipe_requirements(recipe.items)
+        if ia_dunce.has_required_items(self, reqs) then
+            return true
+        end
+    end
+
+    return false
 end
