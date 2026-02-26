@@ -164,5 +164,5 @@ end
 --end
 function ia_dunce.find_nearby_doors(pos, radius)
     local r = radius or 2
-    return get_sorted_nodes(pos, r, {"group:door"})
+    return ia_dunce.get_sorted_nodes(pos, r, {"group:door"})
 end

@@ -155,6 +155,6 @@ end
 --- Finds the closest bed or sleeping mat.
 function ia_dunce.find_closest_bed(self, radius)
     local pos = self.object:get_pos()
-    local beds = get_sorted_nodes(pos, radius, {"group:bed", "sleeping_mat:mat"})
+    local beds = ia_dunce.get_sorted_nodes(pos, radius, {"group:bed", "sleeping_mat:mat"})
     return beds[1] -- Return closest
 end

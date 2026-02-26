@@ -1,6 +1,7 @@
 -- ia_dunce/sensors.lua
 
 -- TODO optionally search within chests
+-- TODO need to be able to specify a sort callback (it's necessary to be able to sort by distance, but some jobs really need to preference the y-axis over the others)
 
 --- Internal Helper: Finds and sorts objects based on a filter.
 -- @param pos Center position
@@ -110,7 +111,7 @@ end
 
 
 
-local function get_sorted_nodes(pos, radius, node_names)
+function ia_dunce.get_sorted_nodes(pos, radius, node_names)
     local minp = vector.add(pos, -radius)
     local maxp = vector.add(pos, radius)
     local nodes = minetest.find_nodes_in_area(minp, maxp, node_names)
