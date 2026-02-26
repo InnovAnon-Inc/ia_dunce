@@ -59,7 +59,7 @@ function ia_dunce.register_dunce_entity(name, definition)
     -- Injected On Step: This is the "Brain Tick"
     definition.on_step = function(self, dtime)
         -- 1. Process Pathfinding Coroutines (The "Thinking" phase)
-        ia_dunce.process_pathfinding(self)
+        --ia_dunce.process_pathfinding(self)
 
         -- 2. Process Appliance/Task Coroutines (The "Working" phase)
         -- We can use the same logic for your appliance.lua yields!
