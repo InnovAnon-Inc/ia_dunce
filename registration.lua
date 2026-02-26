@@ -51,33 +51,56 @@
 ----    ia_humanoid.register_humanoid_entity(name, definition)
 ----end
 
+--function ia_dunce.register_dunce_entity(name, definition)
+--	minetest.log('ia_dunce.register_dunce_entity()')
+--    local user_on_activate = definition.on_activate
+--    local user_on_step = definition.on_step
+--
+--    -- Injected On Step: This is the "Brain Tick"
+--    definition.on_step = function(self, dtime)
+--        -- 1. Process Pathfinding Coroutines (The "Thinking" phase)
+--        --ia_dunce.process_pathfinding(self)
+--
+--        -- 2. Process Appliance/Task Coroutines (The "Working" phase)
+--        -- We can use the same logic for your appliance.lua yields!
+--
+--        -- 3. Run the user's logic (Scavenging, etc.)
+--        if user_on_step then
+--            user_on_step(self, dtime)
+--        end
+--    end
+--
+--    definition.on_activate = function(self, staticdata, dtime_s)
+--        ia_dunce.init_instance(self)
+--        if user_on_activate then
+--            user_on_activate(self, staticdata, dtime_s)
+--        end
+--    end
+--
+--    ia_humanoid.register_humanoid_entity(name, definition)
+--
+--    minetest.log("action", "[ia_dunce] Registered worker entity: " .. name)
+--end
+-- ia_dunce/registration.lua
+
 function ia_dunce.register_dunce_entity(name, definition)
-	minetest.log('ia_dunce.register_dunce_entity()')
-    local user_on_activate = definition.on_activate
-    local user_on_step = definition.on_step
-
-    -- Injected On Step: This is the "Brain Tick"
-    definition.on_step = function(self, dtime)
-        -- 1. Process Pathfinding Coroutines (The "Thinking" phase)
-        --ia_dunce.process_pathfinding(self)
-
-        -- 2. Process Appliance/Task Coroutines (The "Working" phase)
-        -- We can use the same logic for your appliance.lua yields!
-
-        -- 3. Run the user's logic (Scavenging, etc.)
-        if user_on_step then
-            user_on_step(self, dtime)
-        end
-    end
+    minetest.log('action', '[ia_dunce] Registering Dunce: ' .. name)
+    
+    local current_on_activate = definition.on_activate
 
     definition.on_activate = function(self, staticdata, dtime_s)
-        ia_dunce.init_instance(self)
-        if user_on_activate then
-            user_on_activate(self, staticdata, dtime_s)
+        -- If ia_pathfinding didn't already call this, call it now
+        -- We check for a "dunce_init" flag to prevent double-init
+        if not self._dunce_initialized then
+            ia_dunce.init_instance(self)
+            self._dunce_initialized = true
+        end
+
+        if current_on_activate then
+            current_on_activate(self, staticdata, dtime_s)
         end
     end
 
+    -- Pass down to the physical engine
     ia_humanoid.register_humanoid_entity(name, definition)
-
-    minetest.log("action", "[ia_dunce] Registered worker entity: " .. name)
 end

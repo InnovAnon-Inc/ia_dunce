@@ -26,7 +26,7 @@ local files = {
     "recipes",
     "registration",
     "rightclick",
-    "scavenge",
+    --"scavenge",
     "sensors",
     "sneak",
     "stop",
