@@ -18,6 +18,7 @@ local files = {
     "doors",
     "fall",
     "fly",
+    "food",
     "furnace",
     "jump",
     "interact",
