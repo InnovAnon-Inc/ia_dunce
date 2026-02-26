@@ -8,29 +8,29 @@
 -- @param radius Search radius
 -- @param filter_func function(object) returns boolean
 -- @return table Sorted list of {object = obj, pos = p, distance = d}
-local function get_sorted_objects(pos, radius, filter_func)
-	--minetest.log('ia_dunce.get_sorted_objects()')
-    local all_objects = minetest.get_objects_inside_radius(pos, radius)
-    local filtered = {}
-
-    for _, obj in ipairs(all_objects) do
-        if not filter_func or filter_func(obj) then
-            local obj_pos = obj:get_pos()
-            table.insert(filtered, {
-                object = obj,
-                pos = obj_pos,
-                distance = vector.distance(pos, obj_pos)
-            })
-        end
-    end
-
-    -- Sort by distance (ascending)
-    table.sort(filtered, function(a, b)
-        return a.distance < b.distance
-    end)
-
-    return filtered
-end
+--local function get_sorted_objects(pos, radius, filter_func)
+--	--minetest.log('ia_dunce.get_sorted_objects()')
+--    local all_objects = minetest.get_objects_inside_radius(pos, radius)
+--    local filtered = {}
+--
+--    for _, obj in ipairs(all_objects) do
+--        if not filter_func or filter_func(obj) then
+--            local obj_pos = obj:get_pos()
+--            table.insert(filtered, {
+--                object = obj,
+--                pos = obj_pos,
+--                distance = vector.distance(pos, obj_pos)
+--            })
+--        end
+--    end
+--
+--    -- Sort by distance (ascending)
+--    table.sort(filtered, function(a, b)
+--        return a.distance < b.distance
+--    end)
+--
+--    return filtered
+--end
 
 --- Finds all players within range, matching an optional condition.
 function ia_dunce.find_players(self, radius, condition)
@@ -111,22 +111,22 @@ end
 
 
 
-function ia_dunce.get_sorted_nodes(pos, radius, node_names)
-    local minp = vector.add(pos, -radius)
-    local maxp = vector.add(pos, radius)
-    local nodes = minetest.find_nodes_in_area(minp, maxp, node_names)
-
-    local sorted = {}
-    for _, p in ipairs(nodes) do
-        table.insert(sorted, {
-            pos = p,
-            distance = vector.distance(pos, p)
-        })
-    end
-
-    table.sort(sorted, function(a, b) return a.distance < b.distance end)
-    return sorted
-end
+--function ia_dunce.get_sorted_nodes(pos, radius, node_names)
+--    local minp = vector.add(pos, -radius)
+--    local maxp = vector.add(pos, radius)
+--    local nodes = minetest.find_nodes_in_area(minp, maxp, node_names)
+--
+--    local sorted = {}
+--    for _, p in ipairs(nodes) do
+--        table.insert(sorted, {
+--            pos = p,
+--            distance = vector.distance(pos, p)
+--        })
+--    end
+--
+--    table.sort(sorted, function(a, b) return a.distance < b.distance end)
+--    return sorted
+--end
 
 
 
@@ -226,4 +226,144 @@ end
 --- Predicate: Is the mob in immediate danger?
 function ia_dunce.is_in_danger(self)
     return ia_dunce.get_danger_level(self) > 10
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- ia_dunce/sensors.lua
+
+--- Internal: Default Euclidean sort
+local function default_sort(a, b)
+    return a.distance < b.distance
+end
+
+--- Internal Helper: Finds and sorts objects based on a filter and optional custom sort.
+-- @param pos Center position
+-- @param radius Search radius
+-- @param filter_func function(object) returns boolean
+-- @param sort_func Optional function(a, b) for table.sort
+-- @return table Sorted list of {object = obj, pos = p, distance = d}
+local function get_sorted_objects(pos, radius, filter_func, sort_func)
+    local all_objects = minetest.get_objects_inside_radius(pos, radius)
+    local filtered = {}
+
+    for _, obj in ipairs(all_objects) do
+        if not filter_func or filter_func(obj) then
+            local obj_pos = obj:get_pos()
+            table.insert(filtered, {
+                object = obj,
+                pos = obj_pos,
+                distance = vector.distance(pos, obj_pos)
+            })
+        end
+    end
+
+    table.sort(filtered, sort_func or default_sort)
+    return filtered
+end
+
+--- Finds all nodes in area with custom sorting support.
+-- @param sort_func Optional function(a, b) to preference specific axes.
+function ia_dunce.get_sorted_nodes(pos, radius, node_names, sort_func)
+    local minp = vector.add(pos, -radius)
+    local maxp = vector.add(pos, radius)
+    local nodes = minetest.find_nodes_in_area(minp, maxp, node_names)
+
+    local sorted = {}
+    for _, p in ipairs(nodes) do
+        table.insert(sorted, {
+            pos = p,
+            distance = vector.distance(pos, p)
+        })
+    end
+
+    table.sort(sorted, sort_func or default_sort)
+    return sorted
+end
+
+--- Finds nodes with inventories (Chests, Furnaces, etc.)
+-- @param check_items_func Optional function(stack) to check for specific items inside.
+function ia_dunce.find_inventories(self, radius, check_items_func, sort_func)
+    local pos = self.object:get_pos()
+    -- Common container groups in Minetest
+    local node_names = {"group:container", "group:chest", "group:furnace"}
+    local nodes = ia_dunce.get_sorted_nodes(pos, radius, node_names, sort_func)
+
+    local results = {}
+    for _, node_data in ipairs(nodes) do
+        local meta = minetest.get_meta(node_data.pos)
+        local inv = meta:get_inventory()
+
+        if inv then
+            local match = true
+            if check_items_func then
+                match = false
+                -- Check all lists (main, src, fuel, etc.)
+                for listname, _ in pairs(inv:get_lists()) do
+                    local list = inv:get_list(listname)
+                    for _, stack in ipairs(list) do
+                        if not stack:is_empty() and check_items_func(stack) then
+                            match = true
+                            break
+                        end
+                    end
+                    if match then break end
+                end
+            end
+
+            if match then
+                table.insert(results, node_data)
+            end
+        end
+    end
+    return results
+end
+
+--- Finds potential theft targets (Players/Entities with valuables).
+function ia_dunce.find_theft_targets(self, radius, sort_func)
+    local pos = self.object:get_pos()
+    return get_sorted_objects(pos, radius, function(obj)
+        -- Use the primitive from steal.lua to check viability
+        return obj ~= self.object and ia_dunce.can_steal_from(self, obj)
+    end, sort_func)
+end
+
+--- Helper: Generates a Y-axis penalty sort function.
+-- Usage: self:find_inventories(10, nil, ia_dunce.create_y_penalty_sort(pos, 2.0))
+function ia_dunce.create_y_penalty_sort(center_pos, y_weight)
+    return function(a, b)
+        local da = vector.subtract(a.pos, center_pos)
+        local db = vector.subtract(b.pos, center_pos)
+        local dist_a = math.sqrt(da.x^2 + (da.y * y_weight)^2 + da.z^2)
+        local dist_b = math.sqrt(db.x^2 + (db.y * y_weight)^2 + db.z^2)
+        return dist_a < dist_b
+    end
 end

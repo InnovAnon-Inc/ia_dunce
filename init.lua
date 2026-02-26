@@ -40,6 +40,7 @@ local files = {
     --"scavenge",
     "sensors",
     "sneak",
+    "steal",
     "stop",
     "storage",
     "swim",
