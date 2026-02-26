@@ -463,3 +463,32 @@ function ia_dunce.apply_vertical_impulse(self, power)
         z = v.z
     })
 end
+
+
+
+
+
+
+
+
+-- ia_dunce/util.lua
+
+--- Logic for determining if an object is a threat.
+-- This is a placeholder that can be expanded by mods using ia_dunce.
+function ia_dunce.is_hostile(self, object)
+    -- If it's a player, maybe they are hostile if holding a sword?
+    if object:is_player() then
+        local item = object:get_wielded_item():get_name()
+        if minetest.get_item_group(item, "weapon") > 0 then
+            return true
+        end
+    end
+
+    -- Check for entity-specific hostility flags
+    local lua_ent = object:get_luaentity()
+    if lua_ent and lua_ent._is_hostile then
+        return true
+    end
+
+    return false
+end

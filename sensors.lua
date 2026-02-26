@@ -127,3 +127,103 @@ function ia_dunce.get_sorted_nodes(pos, radius, node_names)
     table.sort(sorted, function(a, b) return a.distance < b.distance end)
     return sorted
 end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+-- ia_dunce/sensors.lua
+
+--- Returns the number of empty nodes directly above the mob.
+function ia_dunce.get_headspace(self, max_dist)
+    local pos = self.object:get_pos()
+    if not pos then return 0 end
+
+    max_dist = max_dist or 5
+    for i = 1, max_dist do
+        local check_pos = {x = pos.x, y = pos.y + i, z = pos.z}
+        local node = minetest.get_node(check_pos)
+        if ia_dunce.get_node_properties(node.name) then -- if walkable/solid
+            return i - 1
+        end
+    end
+    return max_dist
+end
+
+--- Predicate: Is the mob likely "indoors"?
+-- Uses a combination of headspace and light source (artificial vs sunlight).
+function ia_dunce.is_indoors(self)
+    local pos = self.object:get_pos()
+    if not pos then return false end
+
+    local light_sun = minetest.get_node_light(pos, 0.5) -- Light from sky
+    local light_total = minetest.get_node_light(pos)   -- Total light
+
+    -- If sky light is significantly lower than total light, or very low in general
+    -- we are likely under a superstructure or underground.
+    return (light_sun or 0) < 5 and ia_dunce.get_headspace(self, 15) < 15
+end
+
+--- Generic Danger Detection
+-- Returns a threat score (0 to 100).
+function ia_dunce.get_danger_level(self)
+    local pos = self.object:get_pos()
+    if not pos then return 0 end
+
+    local threat = 0
+
+    -- 1. Radiant Node Damage (Lava, Fire, Poop Blocks)
+    -- We check a small radius around the mob
+    local radius = 2
+    local minp = vector.subtract(pos, radius)
+    local maxp = vector.add(pos, radius)
+    local nodes = minetest.find_nodes_in_area(minp, maxp, {"group:danger", "group:igniter"})
+
+    for _, n_pos in ipairs(nodes) do
+        local node = minetest.get_node(n_pos)
+        local def = minetest.registered_nodes[node.name]
+
+        -- Check for explicit damage_per_second in the node definition
+        if def and def.damage_per_second and def.damage_per_second > 0 then
+            threat = threat + (def.damage_per_second * 10)
+        end
+    end
+
+    -- 2. Proximity to Hostile Entities
+    -- Downstream AI can mark certain entities as "hostile" in a table
+    local nearby = minetest.get_objects_inside_radius(pos, 6)
+    for _, obj in ipairs(nearby) do
+        if obj ~= self.object and ia_dunce.is_hostile(self, obj) then
+            local dist = vector.distance(pos, obj:get_pos())
+            threat = threat + (20 / math.max(dist, 1))
+        end
+    end
+
+    return math.min(threat, 100)
+end
+
+--- Predicate: Is the mob in immediate danger?
+function ia_dunce.is_in_danger(self)
+    return ia_dunce.get_danger_level(self) > 10
+end

@@ -77,3 +77,7 @@ function ia_dunce.climb(self)
     self._is_climbing = false
     return false
 end
+
+function ia_dunce.is_climbing(self)
+    return self._is_climbing == true
+end

@@ -17,3 +17,12 @@ function ia_dunce.fall(self)
 
     return false
 end
+
+function ia_dunce.is_falling(self)
+    local v = self.object:get_velocity()
+    if v.y >= -1.0 then return false end -- Not falling fast enough
+
+    local pos = self.object:get_pos()
+    local ground = ia_dunce.find_ground_level(pos, 0, 2)
+    return ground == nil -- No ground immediately beneath
+end

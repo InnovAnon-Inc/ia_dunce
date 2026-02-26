@@ -11,3 +11,7 @@ function ia_dunce.sneak(self, active)
         ia_dunce.set_animation(self, 'STAND')
     end
 end
+
+function ia_dunce.is_sneaking(self)
+    return self._is_sneaking == true
+end

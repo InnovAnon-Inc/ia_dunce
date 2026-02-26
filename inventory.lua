@@ -210,3 +210,8 @@ function ia_dunce.auto_equip_armor(self, condition)
     end
     return false
 end
+
+function ia_dunce.is_inventory_full(self, list_name)
+    local inv = self.fake_player:get_inventory()
+    return not inv:room_for_item(list_name or "main", "default:dirt") -- Use a dummy common item
+end
