@@ -10,6 +10,7 @@ local files = {
     "appliance",
     "bed",
     "climb",
+    "cramped",
     "dig",
     "doors",
     "fall",
