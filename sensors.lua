@@ -36,7 +36,7 @@
 function ia_dunce.find_players(self, radius, condition)
 	--minetest.log('ia_dunce.find_players()')
     local pos = self.object:get_pos()
-    return get_sorted_objects(pos, radius, function(obj)
+    return ia_dunce.get_sorted_objects(pos, radius, function(obj)
         if not obj:is_player() then return false end
         return not condition or condition(obj)
     end)
@@ -47,7 +47,7 @@ function ia_dunce.find_items(self, radius, condition)
 	--minetest.log('ia_dunce.find_items()')
     --local pos = self:get_pos()
     local pos = self.object:get_pos()
-    return get_sorted_objects(pos, radius, function(obj)
+    return ia_dunce.get_sorted_objects(pos, radius, function(obj)
         local ent = obj:get_luaentity()
         if not ent or ent.name ~= "__builtin:item" then return false end
         
@@ -64,7 +64,7 @@ function ia_dunce.find_entities(self, radius, condition)
     local pos = self.object:get_pos()
     local my_obj = self.object
     
-    return get_sorted_objects(pos, radius, function(obj)
+    return ia_dunce.get_sorted_objects(pos, radius, function(obj)
         if obj == my_obj then return false end -- Don't find yourself
         if obj:is_player() then return false end -- Players handled separately
         
@@ -97,7 +97,7 @@ function ia_dunce.find_reachable_item(self, radius, condition)
     return nil
 end
 
-local function is_not_crowded(stack, obj) -- TODO expose convenience filters
+function ia_dunce.is_not_crowded(stack, obj) -- TODO expose convenience filters
     local pos = obj:get_pos()
     -- Reuse our occupation check from the previous step!
     -- We ignore the object itself, but check if ANYONE ELSE is standing there.
@@ -261,7 +261,7 @@ end
 -- ia_dunce/sensors.lua
 
 --- Internal: Default Euclidean sort
-local function default_sort(a, b)
+function ia_dunce.default_sort(a, b)
     return a.distance < b.distance
 end
 
@@ -271,7 +271,7 @@ end
 -- @param filter_func function(object) returns boolean
 -- @param sort_func Optional function(a, b) for table.sort
 -- @return table Sorted list of {object = obj, pos = p, distance = d}
-local function get_sorted_objects(pos, radius, filter_func, sort_func)
+function ia_dunce.get_sorted_objects(pos, radius, filter_func, sort_func)
     local all_objects = minetest.get_objects_inside_radius(pos, radius)
     local filtered = {}
 
@@ -286,7 +286,7 @@ local function get_sorted_objects(pos, radius, filter_func, sort_func)
         end
     end
 
-    table.sort(filtered, sort_func or default_sort)
+    table.sort(filtered, sort_func or ia_dunce.default_sort)
     return filtered
 end
 
@@ -350,7 +350,7 @@ end
 --- Finds potential theft targets (Players/Entities with valuables).
 function ia_dunce.find_theft_targets(self, radius, sort_func)
     local pos = self.object:get_pos()
-    return get_sorted_objects(pos, radius, function(obj)
+    return ia_dunce.get_sorted_objects(pos, radius, function(obj)
         -- Use the primitive from steal.lua to check viability
         return obj ~= self.object and ia_dunce.can_steal_from(self, obj)
     end, sort_func)
