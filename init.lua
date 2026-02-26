@@ -22,6 +22,7 @@ local files = {
     "is_line_of_sight_clear",
     "is_stuck",
     "ladder",
+    "leftclick",
     "lay",
     "move_vertically",
     --"movement",
