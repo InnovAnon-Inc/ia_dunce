@@ -45,6 +45,8 @@ end
 --- Finds all dropped items within range, matching an optional condition.
 function ia_dunce.find_items(self, radius, condition)
 	--minetest.log('ia_dunce.find_items()')
+	assert(self)
+	assert(self.object)
     --local pos = self:get_pos()
     local pos = self.object:get_pos()
     return ia_dunce.get_sorted_objects(pos, radius, function(obj)
