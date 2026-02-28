@@ -77,7 +77,7 @@ end
 --    minetest.log("action", "[ia_dunce] Initialized worker logic for: " .. (self_obj:get_player_name() or "unknown"))
 --end
 function ia_dunce.init_instance(self_obj)
-	minetest.log('ia_dunce.init_instance()')
+	--minetest.log('ia_dunce.init_instance()')
     -- Inject methods
     for name, func in pairs(ia_dunce) do
         if name ~= "init_instance" and name ~= "register_dunce_entity" then
