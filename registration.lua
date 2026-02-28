@@ -95,10 +95,12 @@ function ia_dunce.register_dunce_entity(name, definition)
             ia_dunce.init_instance(self)
             self._dunce_initialized = true
         end
+        assert(self:is_player() == true)
 
         if current_on_activate then
             current_on_activate(self, staticdata, dtime_s)
         end
+        assert(self:is_player() == true)
     end
 
     -- Pass down to the physical engine
