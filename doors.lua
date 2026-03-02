@@ -166,3 +166,76 @@ function ia_dunce.find_nearby_doors(pos, radius)
     local r = radius or 2
     return ia_dunce.get_sorted_nodes(pos, r, {"group:door"})
 end
+
+-- TODO can/should place door would involve digging & crafting ?
+
+--- Helper: Returns the traversal vectors for a door based on its open/closed state.
+-- Handles the param2 shift: Closed (a) vs Open (c)
+-- @param pos Vector position of the door
+-- @return table {front, back} as unit offsets (vectors)
+function ia_dunce.get_door_vectors(pos)
+    local node = minetest.get_node(pos)
+    local name = node.name
+    local p2 = node.param2
+
+    -- Assert: Ensure we are actually looking at a door to prevent logic errors
+    assert(minetest.get_item_group(name, "door") > 0, "get_door_vectors: node is not a door: " .. name)
+
+    local is_open = string.find(name, "_c") ~= nil
+    local axis_offset = {x = 0, y = 0, z = 0}
+
+    -- Mapping based on your provided context:
+    -- West Wall: Closed(a, p2:1), Open(c, p2:2) -> Axis is East/West (X)
+    -- South Wall: Closed(a, p2:0), Open(c, p2:1) -> Axis is North/South (Z)
+    -- East Wall: Closed(a, p2:3), Open(c, p2:0) -> Axis is East/West (X)
+    -- North Wall: Closed(a, p2:2), Open(c, p2:3) -> Axis is North/South (Z)
+
+    if not is_open then
+        -- Closed State Logic
+        if p2 == 0 then axis_offset = {x = 0, y = 0, z = 1}   -- South Wall
+        elseif p2 == 1 then axis_offset = {x = 1, y = 0, z = 0}   -- West Wall
+        elseif p2 == 2 then axis_offset = {x = 0, y = 0, z = -1}  -- North Wall
+        elseif p2 == 3 then axis_offset = {x = -1, y = 0, z = 0}  -- East Wall
+        end
+    else
+        -- Open State Logic (Param2 shifts by 1)
+        if p2 == 1 then axis_offset = {x = 0, y = 0, z = 1}   -- South Wall (Open)
+        elseif p2 == 2 then axis_offset = {x = 1, y = 0, z = 0}   -- West Wall (Open)
+        elseif p2 == 3 then axis_offset = {x = 0, y = 0, z = -1}  -- North Wall (Open)
+        elseif p2 == 0 then axis_offset = {x = -1, y = 0, z = 0}  -- East Wall (Open)
+        end
+    end
+
+    minetest.log('info', string.format("[ia_dunce] Door at %s (%s, p2:%d) axis set to %s",
+        minetest.pos_to_string(pos), is_open and "Open" or "Closed", p2, minetest.pos_to_string(axis_offset)))
+
+    return {
+        front = axis_offset,
+        back = {x = -axis_offset.x, y = 0, z = -axis_offset.z}
+    }
+end
+
+--- Internal Helper: Interacts with a door at a given position.
+local function set_door_state(pos, state)
+    minetest.log('info', 'ia_dunce.set_door_state() at ' .. minetest.pos_to_string(pos))
+    if not minetest.get_modpath("doors") then return false end
+
+    local door = doors.get(pos)
+    if not door then
+        minetest.log('warning', '[ia_dunce] Could not get door object at ' .. minetest.pos_to_string(pos))
+        return false
+    end
+
+    local current_state = door:state()
+
+    if state == nil then
+        if current_state then door:close() else door:open() end
+        return true
+    elseif state ~= current_state then
+        if state then door:open() else door:close() end
+        return true
+    end
+
+    return false
+end
+

@@ -2,6 +2,7 @@
 
 -- TODO optionally search within chests
 -- TODO need to be able to specify a sort callback (it's necessary to be able to sort by distance, but some jobs really need to preference the y-axis over the others)
+-- TODO find_items_or_nodes()
 
 --- Internal Helper: Finds and sorts objects based on a filter.
 -- @param pos Center position
@@ -307,7 +308,7 @@ function ia_dunce.get_sorted_nodes(pos, radius, node_names, sort_func)
         })
     end
 
-    table.sort(sorted, sort_func or default_sort)
+    table.sort(sorted, sort_func or ia_dunce.default_sort)
     return sorted
 end
 

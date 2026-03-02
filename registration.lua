@@ -6,6 +6,7 @@ function ia_dunce.register_dunce_entity(name, definition)
     local final_def           = table.copy(definition)
     local current_on_activate = definition.on_activate
 
+    -- TODO ensure that this doesn't run twice
     final_def.on_activate = function(self, staticdata, dtime_s)
         -- If ia_pathfinding didn't already call this, call it now
         -- We check for a "dunce_init" flag to prevent double-init
