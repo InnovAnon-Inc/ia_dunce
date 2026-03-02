@@ -49,6 +49,7 @@ local files = {
     "storage",
     "swim",
     "tod",
+    "trapdoors",
     "use",
     "util",
 }

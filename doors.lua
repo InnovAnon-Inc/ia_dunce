@@ -1,73 +1,13 @@
----- ia_dunce/doors.lua
---
------ Internal Helper: Interacts with a door at a given position.
----- @param pos The position of the door node.
----- @param state boolean: true to open, false to close, nil to toggle.
----- @return boolean (Success)
---local function set_door_state(pos, state)
---	minetest.log('ia_dunce.set_door_state()')
---    if not minetest.get_modpath("doors") then return false end
---    
---    local door = doors.get(pos)
---    if not door then return false end
---
---    -- door:state() returns true if open
---    local current_state = door:state()
---    
---    if state == nil then
---        -- Toggle
---        if current_state then door:close() else door:open() end
---        return true
---    elseif state ~= current_state then
---        -- Set specific state
---        if state then door:open() else door:close() end
---        return true
---    end
---    
---    return false -- Already in the desired state
---end
---
------ Scans for and handles doors in front of the Dunce.
----- @param self The fake player object.
----- @param action "open", "close", or "toggle"
----- @return boolean (Whether an interaction occurred)
---function ia_dunce.handle_door_front(self, action)
---	minetest.log('ia_dunce.handle_door_front()')
---    -- We look exactly 1 block ahead
---    local front_pos = ia_dunce.get_relative_node_pos(self, 1)
---    local node = minetest.get_node(front_pos)
---    
---    -- Check if it's actually a door (using groups is better than string.find)
---    if minetest.get_item_group(node.name, "door") > 0 then
---        local state_map = {open = true, close = false, toggle = nil}
---        return set_door_state(front_pos, state_map[action])
---    end
---    
---    return false
---end
---
------ Specifically handles closing a door behind the Dunce.
---function ia_dunce.close_door_behind(self)
---	minetest.log('ia_dunce.close_door_behind()')
---    local back_pos = ia_dunce.get_relative_node_pos(self, -1)
---    local node = minetest.get_node(back_pos)
---    
---    if minetest.get_item_group(node.name, "door") > 0 then
---        return set_door_state(back_pos, false)
---    end
---    
---    return false
---end
---- Internal Helper: Interacts with a door at a given position.
+-- ia_dunce/doors.lua
+
+--- Internal Logic Helpers (Private) ---
+
 local function set_door_state(pos, state)
-	minetest.log('ia_dunce.set_door_state()')
     if not minetest.get_modpath("doors") then return false end
-    
     local door = doors.get(pos)
     if not door then return false end
 
     local current_state = door:state()
-    
     if state == nil then
         if current_state then door:close() else door:open() end
         return true
@@ -75,139 +15,112 @@ local function set_door_state(pos, state)
         if state then door:open() else door:close() end
         return true
     end
-    
     return false
 end
 
---- Logic for deciding if a door is safe to close (checks for other mobs).
 local function is_doorway_clear(pos)
-	minetest.log('ia_dunce.is_doorway_clear()')
-    -- Small radius check: is anyone standing in the frame?
     local objects = minetest.get_objects_inside_radius(pos, 0.8)
-    -- If more than 0 objects (the caller is already > 1.2 away), it's blocked
     return #objects == 0
 end
 
---- Scans for and handles doors in front of the Dunce.
-function ia_dunce.handle_door_front(self, action)
-	minetest.log('ia_dunce.handle_door_front()')
-    local front_pos = ia_dunce.get_relative_node_pos(self, 1)
-    local node = minetest.get_node(front_pos)
-    
-    if minetest.get_item_group(node.name, "door") > 0 then
-        -- Track this door so the movement system knows we are currently "in" a doorway
-        self._active_door_pos = vector.new(front_pos)
-        
-        local state_map = {open = true, close = false, toggle = nil}
-        return set_door_state(front_pos, state_map[action])
+--- Level 0: Predicates (State & Capability) ---
+
+function ia_dunce.is_door(pos)
+    local node = minetest.get_node(pos)
+    return minetest.get_item_group(node.name, "door") > 0
+end
+
+function ia_dunce.is_door_open(pos)
+    local node = minetest.get_node(pos)
+    -- Doors mod uses "_c" for the open (centered) state
+    return string.find(node.name, "_c") ~= nil
+end
+
+function ia_dunce.can_open_door(self, pos)
+    if not ia_dunce.is_door(pos) then return false end
+    local node = minetest.get_node(pos)
+    local is_steel = string.find(node.name, "steel") ~= nil
+    local dist = vector.distance(self.object:get_pos(), pos)
+
+    if is_steel then return false end
+    return dist < 1.6
+end
+
+function ia_dunce.could_use_door(self, pos)
+    if ia_dunce.is_door(pos) then return true end
+    local node = minetest.get_node(pos)
+    local def = minetest.registered_nodes[node.name]
+    if def and not def.walkable and ia_dunce.can_obtain_item(self, "group:door") then
+        return true
     end
-    
     return false
 end
 
---- Checks if the Dunce has cleared the last door and closes it if the coast is clear.
-function ia_dunce.process_door_cleanup(self)
-	--minetest.log('ia_dunce.process_door_cleanup()')
-    if not self._active_door_pos then return end
+--- Level 1: Atomic Action ---
 
-    local my_pos = self.object:get_pos()
-    if not my_pos then return end
-
-    -- 1. Check if we have moved far enough away (cleared the hitbox)
-    local dist = vector.distance(my_pos, self._active_door_pos)
+function ia_dunce.interact_door(self, pos, action)
+    minetest.log('action', '[ia_dunce] interact_door: ' .. (action or "toggle") .. " at " .. minetest.pos_to_string(pos))
+    -- Assert that we are actually interacting with a door
+    assert(ia_dunce.is_door(pos), "interact_door: pos is not a door node")
     
-    if dist > 1.3 then
-        -- 2. Future-proofing: Only close if no one else is currently passing through
-        if is_doorway_clear(self._active_door_pos) then
-            set_door_state(self._active_door_pos, false)
-            self._active_door_pos = nil -- Task complete
-        end
-    end
-
-    -- 3. Edge Case: If we wandered 5+ blocks away without closing it (path changed), 
-    -- just forget about it to prevent "ghost closing" later.
-    if dist > 5.0 then
-        self._active_door_pos = nil
-    end
+    self._active_door_pos = vector.new(pos)
+    local state_map = {open = true, close = false, toggle = nil}
+    return set_door_state(pos, state_map[action])
 end
 
+--- Level 2: Preparation + Action ---
 
+function ia_dunce.prepare_door_path(self, pos, target_state)
+    local current_open = ia_dunce.is_door_open(pos)
+    if current_open ~= target_state then
+        return ia_dunce.interact_door(self, pos, target_state and "open" or "close")
+    end
+    return true
+end
 
+--- Level 3: Provisioning + Preparation + Action ---
 
+function ia_dunce.place_and_use_door(self, pos)
+    -- Placeholder for inventory/crafting logic
+    if ia_dunce.has_item(self, "group:door") then
+        -- Logic to wield and right_click
+        return true
+    end
+    return false
+end
 
+--- Navigation & API Helpers (Required by ia_pathfinding) ---
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
---function ia_dunce.find_nearby_doors(pos) -- TODO xref against sensors
---    local doors_found = {}
---    -- Search 2 nodes up and 1 node down for door groups
---    local minp = vector.add(pos, {x=-1, y=-1, z=-1})
---    local maxp = vector.add(pos, {x=1, y=2, z=1})
---    local nodes = minetest.find_nodes_in_area(minp, maxp, {"group:door"})
---    
---    for _, p in ipairs(nodes) do
---        table.insert(doors_found, p)
---    end
---    return doors_found
---end
+-- This was the missing function causing the crash!
 function ia_dunce.find_nearby_doors(pos, radius)
-    local r = radius or 2
+    local r = radius or 8 -- Using 8 as a sensible default for detours
+    -- Assert sensor helper exists to prevent cascading nils
+    assert(ia_dunce.get_sorted_nodes, "ia_dunce.find_nearby_doors requires ia_dunce.get_sorted_nodes")
     return ia_dunce.get_sorted_nodes(pos, r, {"group:door"})
 end
 
--- TODO can/should place door would involve digging & crafting ?
-
---- Helper: Returns the traversal vectors for a door based on its open/closed state.
--- Handles the param2 shift: Closed (a) vs Open (c)
--- @param pos Vector position of the door
--- @return table {front, back} as unit offsets (vectors)
 function ia_dunce.get_door_vectors(pos)
     local node = minetest.get_node(pos)
-    local name = node.name
+    assert(minetest.get_item_group(node.name, "door") > 0, "get_door_vectors: not a door")
+    
     local p2 = node.param2
-
-    -- Assert: Ensure we are actually looking at a door to prevent logic errors
-    assert(minetest.get_item_group(name, "door") > 0, "get_door_vectors: node is not a door: " .. name)
-
-    local is_open = string.find(name, "_c") ~= nil
+    local is_open = ia_dunce.is_door_open(pos)
     local axis_offset = {x = 0, y = 0, z = 0}
 
-    -- Mapping based on your provided context:
-    -- West Wall: Closed(a, p2:1), Open(c, p2:2) -> Axis is East/West (X)
-    -- South Wall: Closed(a, p2:0), Open(c, p2:1) -> Axis is North/South (Z)
-    -- East Wall: Closed(a, p2:3), Open(c, p2:0) -> Axis is East/West (X)
-    -- North Wall: Closed(a, p2:2), Open(c, p2:3) -> Axis is North/South (Z)
-
+    -- Param2 mapping for Minetest 'doors' mod (West, South, East, North)
     if not is_open then
-        -- Closed State Logic
-        if p2 == 0 then axis_offset = {x = 0, y = 0, z = 1}   -- South Wall
-        elseif p2 == 1 then axis_offset = {x = 1, y = 0, z = 0}   -- West Wall
-        elseif p2 == 2 then axis_offset = {x = 0, y = 0, z = -1}  -- North Wall
-        elseif p2 == 3 then axis_offset = {x = -1, y = 0, z = 0}  -- East Wall
+        if p2 == 0 then axis_offset = {x = 0, y = 0, z = 1}
+        elseif p2 == 1 then axis_offset = {x = 1, y = 0, z = 0}
+        elseif p2 == 2 then axis_offset = {x = 0, y = 0, z = -1}
+        elseif p2 == 3 then axis_offset = {x = -1, y = 0, z = 0}
         end
     else
-        -- Open State Logic (Param2 shifts by 1)
-        if p2 == 1 then axis_offset = {x = 0, y = 0, z = 1}   -- South Wall (Open)
-        elseif p2 == 2 then axis_offset = {x = 1, y = 0, z = 0}   -- West Wall (Open)
-        elseif p2 == 3 then axis_offset = {x = 0, y = 0, z = -1}  -- North Wall (Open)
-        elseif p2 == 0 then axis_offset = {x = -1, y = 0, z = 0}  -- East Wall (Open)
+        if p2 == 1 then axis_offset = {x = 0, y = 0, z = 1}
+        elseif p2 == 2 then axis_offset = {x = 1, y = 0, z = 0}
+        elseif p2 == 3 then axis_offset = {x = 0, y = 0, z = -1}
+        elseif p2 == 0 then axis_offset = {x = -1, y = 0, z = 0}
         end
     end
-
-    minetest.log('info', string.format("[ia_dunce] Door at %s (%s, p2:%d) axis set to %s",
-        minetest.pos_to_string(pos), is_open and "Open" or "Closed", p2, minetest.pos_to_string(axis_offset)))
 
     return {
         front = axis_offset,
@@ -215,27 +128,74 @@ function ia_dunce.get_door_vectors(pos)
     }
 end
 
---- Internal Helper: Interacts with a door at a given position.
-local function set_door_state(pos, state)
-    minetest.log('info', 'ia_dunce.set_door_state() at ' .. minetest.pos_to_string(pos))
-    if not minetest.get_modpath("doors") then return false end
+--- Cleanup Loop ---
 
-    local door = doors.get(pos)
-    if not door then
-        minetest.log('warning', '[ia_dunce] Could not get door object at ' .. minetest.pos_to_string(pos))
-        return false
+function ia_dunce.process_door_cleanup(self)
+    if not self._active_door_pos then return end
+    local my_pos = self.object:get_pos()
+    if not my_pos then return end
+
+    local dist = vector.distance(my_pos, self._active_door_pos)
+    if dist > 1.4 and dist < 4.0 then
+        if is_doorway_clear(self._active_door_pos) then
+            set_door_state(self._active_door_pos, false)
+            self._active_door_pos = nil
+        end
+    elseif dist >= 4.0 then
+        self._active_door_pos = nil
+    end
+end
+
+-- mods/ia_dunce/doors.lua
+
+-- ... (Keep the previous Level 0-3 matrix and set_door_state helper) ...
+
+--- Scans for and handles doors in front of the Dunce.
+-- This is the specific API call ia_pathfinding/doors.lua:48 is looking for.
+function ia_dunce.handle_door_front(self, action)
+    minetest.log('info', '[ia_dunce] handle_door_front action: ' .. (action or "open"))
+
+    -- Assert that we have a valid object to check from
+    assert(self.object, "handle_door_front: self.object is nil")
+
+    -- Use the relative node helper (assumed to be in ia_dunce/sensors.lua)
+    local front_pos = ia_dunce.get_relative_node_pos(self, 1)
+
+    -- Check if it's actually a door before interacting
+    if ia_dunce.is_door(front_pos) then
+        -- Track this door for the cleanup (closing) loop
+        self._active_door_pos = vector.new(front_pos)
+
+        -- Delegate to our Level 1 atomic action
+        return ia_dunce.interact_door(self, front_pos, action)
     end
 
-    local current_state = door:state()
-
-    if state == nil then
-        if current_state then door:close() else door:open() end
-        return true
-    elseif state ~= current_state then
-        if state then door:open() else door:close() end
-        return true
-    end
-
+    minetest.log('warning', '[ia_dunce] handle_door_front called but no door found at ' .. minetest.pos_to_string(front_pos))
     return false
 end
 
+-- FIXME THIS BELONGS IN ia_dunce/trapdoors.lua
+----- Scans for and handles trapdoors in the Dunce's path (above or below).
+---- Restoring this as well to ensure parity across all obstacle types.
+--function ia_dunce.handle_trapdoor(self, action, direction)
+--    local my_pos = self.object:get_pos()
+--    if not my_pos then return false end
+--
+--    -- Check node above head (y+2) or node below feet (y)
+--    local check_offset = (direction == "up") and 2 or 0
+--    local target_pos = vector.round({x = my_pos.x, y = my_pos.y + check_offset, z = my_pos.z})
+--
+--    if ia_dunce.is_trapdoor(target_pos) then
+--        self._active_door_pos = vector.new(target_pos)
+--        return ia_dunce.interact_trapdoor(self, target_pos, action)
+--    end
+--
+--    return false
+--end
+
+---- Ensure these are available for the detour logic
+--function ia_dunce.find_nearby_doors(pos, radius)
+--    local r = radius or 8
+--    assert(ia_dunce.get_sorted_nodes, "ia_dunce.get_sorted_nodes is missing!")
+--    return ia_dunce.get_sorted_nodes(pos, r, {"group:door"})
+--end
