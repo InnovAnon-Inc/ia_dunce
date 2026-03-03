@@ -52,6 +52,7 @@ local files = {
     "trapdoors",
     "use",
     "util",
+    "walk",
 }
 
 -- Load each module

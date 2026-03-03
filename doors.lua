@@ -18,7 +18,7 @@ local function set_door_state(pos, state)
     return false
 end
 
-local function is_doorway_clear(pos)
+function ia_dunce.is_doorway_clear(pos)
     local objects = minetest.get_objects_inside_radius(pos, 0.8)
     return #objects == 0
 end

@@ -1,17 +1,14 @@
 -- ia_dunce/ladder.lua
 -- NOTE must handle climbing up & down
 
+-- ia_dunce/ladder.lua
+
 --- Finds all ladders within a specific search area.
--- @param pos Center position.
--- @param radius Horizontal search radius.
--- @param vertical_range Vertical search range.
--- @return table List of ladder node positions.
 function ia_dunce.find_nearby_ladders(pos, radius, vertical_range)
     local v_range = vertical_range or 2
     local minp = vector.add(pos, {x = -radius, y = -v_range, z = -radius})
     local maxp = vector.add(pos, {x = radius, y = v_range, z = radius})
 
-    -- Returns a list of positions containing ladder group nodes
     return minetest.find_nodes_in_area(minp, maxp, {"group:ladder"})
 end
 
@@ -34,8 +31,9 @@ function ia_dunce.could_climb(self, pos)
 
     local node = minetest.get_node(pos)
     local def = minetest.registered_nodes[node.name]
-    local is_walkable = def and def.walkable
 
+    -- We can only place a ladder on a walkable surface
+    local is_walkable = def and def.walkable
     if is_walkable and ia_dunce.can_obtain_item(self, "group:ladder") then
         return true
     end
@@ -45,10 +43,7 @@ end
 
 --- Level 2: Preparation + Action
 -- Places a ladder from inventory and then initiates climbing.
--- @param pos The position to place the ladder.
--- @param target_y The final altitude we are trying to reach.
 function ia_dunce.place_and_climb(self, pos, target_y)
-    minetest.log('action', '[ia_dunce] place_and_climb triggered at ' .. minetest.pos_to_string(pos))
     local is_ladder = function(stack)
         return minetest.get_item_group(stack:get_name(), "ladder") > 0
     end
@@ -56,7 +51,7 @@ function ia_dunce.place_and_climb(self, pos, target_y)
     if ia_dunce.wield_by_condition(self, is_ladder) then
         -- Place the ladder node
         if ia_dunce.right_click(self, pos, false) then
-            -- Logic now correctly delegates to climb.lua with target altitude
+            -- Delegate to the atomic physics layer
             return ia_dunce.climb(self, target_y)
         end
     end
@@ -64,11 +59,7 @@ function ia_dunce.place_and_climb(self, pos, target_y)
 end
 
 --- Level 3: Provisioning + Preparation + Action
--- @param pos The position to place/climb.
--- @param target_y The altitude of the final destination.
 function ia_dunce.craft_and_climb(self, pos, target_y)
-    minetest.log('action', '[ia_dunce] craft_and_climb checking inventory...')
-
     local has_ladder = ia_dunce.has_item(self, function(name)
         return minetest.get_item_group(name, "ladder") > 0
     end)
@@ -82,8 +73,6 @@ function ia_dunce.craft_and_climb(self, pos, target_y)
     return ia_dunce.place_and_climb(self, pos, target_y)
 end
 
--- mods/ia_dunce/ladder.lua
-
 --- Helper: Returns the traversal offset for a ladder based on its attachment wall.
 -- @param pos Vector position of the ladder node
 -- @return vector The offset where a mob must stand to use the ladder
@@ -91,10 +80,12 @@ function ia_dunce.get_ladder_vectors(pos)
     local node = minetest.get_node(pos)
     local p2 = node.param2
 
-    -- Assert: Ensure we are actually looking at a ladder
-    assert(minetest.get_item_group(node.name, "ladder") > 0, "get_ladder_vectors: node is not a ladder: " .. node.name)
+    -- Assertion to prevent logic errors in pathfinding
+    assert(minetest.get_item_group(node.name, "ladder") > 0,
+        "get_ladder_vectors: node at " .. minetest.pos_to_string(pos) .. " is not a ladder (" .. node.name .. ")")
 
     -- face_offsets map where the mob stands relative to the ladder node
+    -- Standard Minetest ladder param2: 2=N, 3=S, 4=E, 5=W
     local face_offsets = {
         [2] = {x = 0, y = 0, z = 1},  -- Attached North, Stand South
         [3] = {x = 0, y = 0, z = -1}, -- Attached South, Stand North
@@ -103,10 +94,5 @@ function ia_dunce.get_ladder_vectors(pos)
     }
 
     local offset = face_offsets[p2] or {x = 0, y = 0, z = 1}
-
-    minetest.log('info', string.format("[ia_dunce] Ladder at %s (p2:%d) requires offset %s",
-        minetest.pos_to_string(pos), p2, minetest.pos_to_string(offset)))
-
     return vector.new(offset)
 end
-

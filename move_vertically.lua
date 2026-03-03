@@ -6,7 +6,7 @@ function ia_dunce.move_vertically(self)
     local result
     result = ia_dunce.fall(self)
     if result then return result end
-    result = ia_dunce.climb(self)
+    result = ia_dunce.climb(self) -- up or down ???
     if result then return result end
     result = ia_dunce.swim(self)
     if result then return result end
