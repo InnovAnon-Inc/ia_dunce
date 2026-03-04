@@ -79,6 +79,30 @@ end
 --end
 -- ia_dunce/armor.lua
 
+--function ia_dunce.is_armor(item_name)
+--	local groups   = minetest.get_item_group(item_name, "armor")
+--	local is_armor = groups > 0
+--	if is_armor then
+--		return true
+--	end
+--	if minetest.get_item_group(name, "armor_head") > 0 then
+--		return true
+--	end
+--	if minetest.get_item_group(name, "armor_torso") > 0 then
+--		return true
+--	end
+--	if minetest.get_item_group(name, "armor_legs") > 0 then
+--		return true
+--	end
+--	if minetest.get_item_group(name, "armor_feet") > 0 then
+--		return true
+--	end
+--	if minetest.get_item_group(name, "armor_shield") > 0 then
+--		return true
+--	end
+--	return false
+--end
+
 --- Low-level: Is this item name actually armor?
 -- @param item_name The name of the item.
 -- @param armor_type Optional specific group like "torso", "legs", "head", "feet".

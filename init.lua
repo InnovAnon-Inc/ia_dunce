@@ -1,68 +1,62 @@
 -- ia_dunce/init.lua
 
--- ia_dunce: A lightweight, modular port of working_villages logic.
-ia_dunce = {}
-
--- Define the file loading order
--- We load utilities and core libraries first.
-local files = {
-    "animation",
-    "appliance",
-    "armor",
-    "bed",
-    "boat",
-    "book",
-    "bucket",
-    "bug_net",
-    "chest",
-    "climb",
-    "craft",
-    "cramped",
-    "dig",
-    "doors",
-    "fall",
-    "fly",
-    "food",
-    "furnace",
-    "jump",
-    "interact",
-    "inventory",
-    "is_at",
-    "is_line_of_sight_clear",
-    "is_stuck",
-    "ladder",
-    "leftclick",
-    "lay",
-    "move_vertically",
-    --"movement",
-    --"pathfinding",
-    "place",
-    "punch",
-    "recipes",
-    "registration",
-    "rightclick",
-    --"scavenge",
-    "sensors",
-    "sneak",
-    "steal",
-    "stop",
-    "storage",
-    "swim",
-    "tod",
-    "trapdoors",
-    "use",
-    "util",
-    "walk",
-}
-
--- Load each module
-local path = minetest.get_modpath("ia_dunce")
-for _, file in ipairs(files) do
-    local script = path .. "/" .. file .. ".lua"
-    local chunk, err = loadfile(script)
-    assert(chunk)
-    chunk()
-end
+assert(minetest.get_modpath('ia_util'))
+assert(ia_util ~= nil)
+local modname                    = minetest.get_current_modname() or "ia_dunce"
+local storage                    = minetest.get_mod_storage()
+ia_dunce                         = {}
+--local files = {
+--    "animation",
+--    "appliance",
+--    "armor",
+--    "bed",
+--    "boat",
+--    "book",
+--    "bucket",
+--    "bug_net",
+--    "chest",
+--    "climb",
+--    "craft",
+--    "cramped",
+--    "dig",
+--    "doors",
+--    "fall",
+--    "fly",
+--    "food",
+--    "furnace",
+--    "jump",
+--    "interact",
+--    "inventory",
+--    "is_at",
+--    "is_line_of_sight_clear",
+--    "is_stuck",
+--    "ladder",
+--    "leftclick",
+--    "lay",
+--    "move_vertically",
+--    --"movement",
+--    --"pathfinding",
+--    "place",
+--    "punch",
+--    "recipes",
+--    "registration",
+--    "rightclick",
+--    --"scavenge",
+--    "sensors",
+--    "sneak",
+--    "steal",
+--    "stop",
+--    "storage",
+--    "swim",
+--    "tod",
+--    "trapdoors",
+--    "use",
+--    "util",
+--    "walk",
+--}
+local modpath, S                 = ia_util.loadmod(modname)
+local log                        = ia_util.get_logger(modname)
+local assert                     = ia_util.get_assert(modname)
 
 ----- Constructor for a new Dunce instance.
 ---- Wraps an ia_fakelib object with our village-worker logic.
